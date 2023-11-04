@@ -3,6 +3,7 @@
 let promptContainer: HTMLDivElement;
 let blurOverlay: HTMLDivElement;
 
+
 function unblockContent(): void {
   // Remove the input field
   promptContainer.remove();
@@ -17,8 +18,39 @@ function unblockContent(): void {
   window.onscroll = (): void => {};
 }
 
+function validatePrompt(prompt: string): boolean {
+  const url = 'http://127.0.0.1:5000/validate-reason';
+  const data = {
+    reason: prompt,
+  };
+
+  fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data), // Convert data to a JSON string
+  })
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      return response.json(); // Assuming the response is in JSON format
+    })
+    .then((responseData) => {
+      console.log(responseData);
+      if (responseData.is_valid) {
+        unblockContent();
+      }
+    })
+    .catch((error) => {
+      console.error('There was a problem with the fetch operation:', error);
+    });
+  return false;
+}
+
 function makePromptContainer(): HTMLDivElement {
-  
+
   const container = document.createElement('div');
   container.style.position = 'fixed';
   container.style.top = '50%';
@@ -67,8 +99,7 @@ function makePromptContainer(): HTMLDivElement {
 
   // Add event listeners or functionality for the submit button as needed
   submitButton.addEventListener('click', (): void => {
-    console.log('Reason provided: ', inputField.value);
-    unblockContent(); // Call a function to hide the popup
+    validatePrompt(inputField.value);
   });
 
   // Append the title and background to the background container
@@ -79,6 +110,7 @@ function makePromptContainer(): HTMLDivElement {
   container.appendChild(inputField);
   container.appendChild(submitButton);
 
+  // Append the container to the document body
   return container;
 
 }
@@ -125,9 +157,6 @@ function blockContent(): void {
       window.scrollTo(LeftScroll, TopScroll);
     };
   }
-  
 }
-
-
 
 export {blockContent, unblockContent};
