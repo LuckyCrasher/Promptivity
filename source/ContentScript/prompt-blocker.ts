@@ -66,30 +66,49 @@ function makePromptContainer(): HTMLDivElement {
   return container;
 }
 
+function shouldDisplayPopup(): boolean {
+  // Check the current website's URL and decide whether to display the popup
+  const currentURL = window.location.href;
+
+  // Define an array of website URLs where you want to display the popup
+  const allowedWebsites = [
+    'https://www.netflix.com/ie/',
+    'https://www.instagram.com/',
+    'https://www.tiktok.com/',
+    // Add more websites here
+    // ...
+  ];
+  // Check if the currentURL matches any of the allowed websites
+  return allowedWebsites.some((website) => currentURL.includes(website));
+}
+
 function blockContent(): void {
-  // make prompt container
-  promptContainer = makePromptContainer();
-  // Append the input field to the document body
-  // Function to apply the blur overlay
+  if (shouldDisplayPopup()) {
+    // make prompt container
+    promptContainer = makePromptContainer();
+    // Append the input field to the document body
+    // Function to apply the blur overlay
 
-  blurOverlay = document.createElement('div');
-  blurOverlay.id = 'wrap-blur-overlay';
+    blurOverlay = document.createElement('div');
+    blurOverlay.id = 'wrap-blur-overlay';
 
-  // Move the body's children into this wrapper
-  while (document.body.firstChild) {
-    blurOverlay.appendChild(document.body.firstChild);
+    // Move the body's children into this wrapper
+    while (document.body.firstChild) {
+      blurOverlay.appendChild(document.body.firstChild);
+    }
+
+    // Append the wrapper to the body
+    blurOverlay.style.filter = 'blur(8px)';
+    document.body.appendChild(blurOverlay);
+    document.body.appendChild(promptContainer);
+    const TopScroll = document.documentElement.scrollTop;
+    const LeftScroll = document.documentElement.scrollLeft;
+
+    window.onscroll = (): void => {
+      window.scrollTo(LeftScroll, TopScroll);
+    };
   }
-
-  // Append the wrapper to the body
-  blurOverlay.style.filter = 'blur(8px)';
-  document.body.appendChild(blurOverlay);
-  document.body.appendChild(promptContainer);
-  const TopScroll = document.documentElement.scrollTop;
-  const LeftScroll = document.documentElement.scrollLeft;
-
-  window.onscroll = (): void => {
-    window.scrollTo(LeftScroll, TopScroll);
-  };
+  
 }
 
 
