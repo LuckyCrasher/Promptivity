@@ -3,6 +3,34 @@
 let promptContainer: HTMLDivElement;
 let blurOverlay: HTMLDivElement;
 
+function validatePrompt(prompt: string): boolean {
+  const url = 'https://127.0.0.1/validatePrompt';
+  const data = {
+    prompt,
+  };
+
+  fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data), // Convert data to a JSON string
+  })
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      return response.json(); // Assuming the response is in JSON format
+    })
+    .then((responseData) => {
+      console.log(responseData); // Handle the response data here
+    })
+    .catch((error) => {
+      console.error('There was a problem with the fetch operation:', error);
+    });
+  return false;
+}
+
 function makePromptContainer(): HTMLDivElement {
   // Create a container for the input and button
   const container = document.createElement('div');
@@ -39,8 +67,7 @@ function makePromptContainer(): HTMLDivElement {
 
   // Add event listeners or functionality for the submit button as needed
   submitButton.addEventListener('click', (): void => {
-    console.log('HIER DER PROMPT');
-    console.log(inputField.value);
+    validatePrompt(inputField.value);
   });
 
   // Append the input field and submit button to the container
