@@ -9,6 +9,7 @@ from flask_cors import CORS
 import spacy
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.sql import text
+import g4f
 
 import smtplib#email
 from email.mime.text import MIMEText#email
@@ -139,7 +140,7 @@ def sendEmail(body, email):
         server.quit()
 
 
-def genEmail(mostUseWeb, mostUsedReaosn, suggestion):
+def genEmail(mostUseWeb, mostUsedReaosn):
     webStatement = "Your top three used websites were: \n"
     i = 1
     for website in mostUseWeb:
@@ -156,7 +157,7 @@ def genEmail(mostUseWeb, mostUsedReaosn, suggestion):
         i += 1
 
     greeting = "Hey there,"
-    body = greeting + "\n" + webStatement + "\n" + reasonStatement + "\n" + suggestion
+    body = greeting + "\n" + webStatement + "\n" + reasonStatement + "\n"
     return body
 
 
@@ -171,15 +172,79 @@ def compute_stats():
     return most_used_sites, most_common_prompts
 
 
+def getAllData():
+    with app.app_context():
+        query = db.session.execute(text("SELECT hostname, prompt from Records"))
+    return query.fetchall()
+
+
 def ask_chatgpt():
-    return "THIS IS FROM CHAT GPT"
+    # Define the extended dataset
+    suggested_email = """(Hello, 
+                       I am Promptivity and I will provide your recent internet activity to help you better understand your online habits.)
+                       Below is a summary of the time spent most time on:
+                       - {Website 1}: _ amount visited
+                       - {Website 2}: _ amount visited
+                       - {Website 3}: _ amount visited
+                       The most common reasons you gave to visit those sites:
+                       - {Reason 1}: _ amount used 
+                       - {Reason 2}: _ amount used 
+                       - {Reason 3}: _ amount used 
+                       Short Recommendations about productivity and about spending time wisely
+                       Thank you for using Promptivity, Have a great day! 😊"""
+
+    # Function to convert time to minutes
+    #def convert_to_minutes(time_str):
+    #    if 'hour' in time_str:
+    #        hours = float(time_str.split(' hour')[0])
+    #        total_minutes = int(hours * 60)
+    #    else:
+    #        total_minutes = int(time_str.split(' minute')[0])
+    #    return total_minutes
+
+    # Convert the Duration column to minutes
+    #extended_dataset['Duration'] = extended_dataset['Duration'].apply(convert_to_minutes)
+
+    # Group by Reason and aggregate
+    #aggregated_data = extended_dataset.groupby('Reason').agg({
+    #    'Duration': 'sum'
+    #}).reset_index()
+
+    # Convert the aggregated duration back to a more readable format (hours and minutes)
+    #aggregated_data['Duration'] = aggregated_data['Duration'].apply(lambda x: f"{x // 60} hours {x % 60} minutes")
+
+    # Create a string representation of the aggregated data
+    aggregated_str = str(getAllData())
+
+    # Construct the prompt
+    prompt = f"""
+    Write the email about to a user about the time spent on these websites and give suggestions. Here are the data:
+    {aggregated_str}. You don't have to write about all, just make a summary most used websites and reasons. 
+    Mention about good and bad habits. Write a very friendly email, do not be like AI. 
+    Don't ask questions. Make it short. My name is Promptivity, mention you are going to provide the internet activity. 
+    Don't include sources at the end and you cannot provide further details.Use {suggested_email} as the outline
+    """
+
+    # Use g4f to generate the email summary
+    try:
+        email_response = g4f.ChatCompletion.create(
+            model=g4f.models.gpt_4,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        # Print the generated email content
+        return email_response
+    except Exception as e:
+        print(f"An error occurred: {e}")
+    return None
 
 
 def handle_sendmail(thread_num, email):
     print(f"Thread {thread_num}: starting")
     most_common_website, most_common_reason = compute_stats()
-    email_body = genEmail(most_common_website, most_common_reason, ask_chatgpt())
-    sendEmail(email_body, email)
+    chat_gpt = ask_chatgpt()
+    if chat_gpt is None:
+        chat_gpt = genEmail(most_common_website, most_common_reason)
+    sendEmail(chat_gpt, email)
     print(f"Thread {thread_num}: finishing")
     running_threads.pop(thread_num)
 
