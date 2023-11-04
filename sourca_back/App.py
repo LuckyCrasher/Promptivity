@@ -1,13 +1,16 @@
 import atexit
 import datetime
 import threading
+import uuid
 from email.message import EmailMessage
+from typing import Literal
 from urllib.parse import urlparse
 
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import spacy
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import text
 import g4f
 
@@ -35,19 +38,56 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
 # initialize the app with Flask-SQLAlchemy
 db.init_app(app)
 
+Action = Literal["start", "end"]
 
-class Records(db.Model):
-    timestamp = db.Column(db.DateTime, default=datetime.datetime.utcnow(), primary_key=True, nullable=False)
-    hostname = db.Column(db.String(255), nullable=False)
-    prompt = db.Column(db.String(255), nullable=False)
 
-    def __init__(self, timestamp, hostname, prompt):
-        self.timestamp = timestamp
+class Sessions(db.Model):
+    __tablename__ = "sessions"
+    sessionID: Mapped[str] = db.Column(db.String(36), primary_key=True, nullable=False)
+    hostname: Mapped[str] = mapped_column(db.String, nullable=False)
+    prompt: Mapped[str] = mapped_column(db.String, nullable=False)
+
+    @staticmethod
+    def create_session(sessionID, hostname, prompt):
+        new_session = Sessions(sessionID=sessionID, hostname=hostname, prompt=prompt)
+        db.session.add(new_session)
+        db.session.commit()
+
+    def __init__(self, sessionID, hostname, prompt):
+        self.sessionID = sessionID
         self.hostname = hostname
         self.prompt = prompt
 
+
     def __repr__(self):
-        return f'<Records{self.timestamp} - {self.hostname} - {self.prompt}>'
+        return f'<Records{self.timestamp} - {self.hostname} - {self.prompt}>\n'
+
+
+class Records(db.Model):
+    __tablename__ = "records"
+    id: Mapped[int] = db.Column(db.Integer, primary_key=True, nullable=False)
+    sessionID: Mapped[str] = db.Column(db.String(36), db.ForeignKey('sessions.sessionID'), nullable=False)
+    timestamp: Mapped[db.DateTime] = mapped_column(db.DateTime, default=datetime.datetime.utcnow(), nullable=False)
+    action: Mapped[Action] = mapped_column(db.String(10), nullable=False)
+    session = db.relationship('Sessions', backref='records')
+
+    @staticmethod
+    def create_record(session, action):
+        new_record = Records(sessionID=session, timestamp=datetime.datetime.utcnow(), action=action)
+        db.session.add(new_record)
+        db.session.commit()
+        return new_record
+
+    def __init__(self, sessionID, timestamp, action):
+        self.sessionID = sessionID,
+        self.timestamp = timestamp
+        self.action = action
+        pass
+
+    def __repr__(self):
+        return f"<Record {self.id} - {self.sessionID} - {self.timestamp} - {self.action}>\n"
+
+
 
 
 # NOTHING BELOW THIS LINE NEEDS TO CHANGE
@@ -85,15 +125,12 @@ def validate_reason():
         result = '{uri.scheme}://{uri.netloc}/'.format(uri=parsed_uri)
         print(parsed_uri.hostname)
 
-        new_data = Records(
-            timestamp=datetime.datetime.now(),  # You need to import datetime
-            hostname=parsed_uri.hostname,
-            prompt=reason
-        )
-        db.session.add(new_data)
-        db.session.commit()
+        sessionID = str(uuid.uuid4())
+        Sessions.create_session(sessionID, parsed_uri.hostname, reason)
+        Records.create_record(sessionID, "start")
+        print("OKAY")
         if is_valid_response(reason):
-            return jsonify({"reason": reason, "url": result, "is_valid": True}), 200
+            return jsonify({"sessionid": new_data.sessionID, "reason": reason, "url": result, "is_valid": True}), 200
         else:
             return jsonify({"error": "Invalid response or no verb in the response"}, 400)
     except Exception as e:
