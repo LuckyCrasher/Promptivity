@@ -3,10 +3,24 @@
 let promptContainer: HTMLDivElement;
 let blurOverlay: HTMLDivElement;
 
+function unblockContent(): void {
+  // Remove the input field
+  promptContainer.remove();
+  // Function to apply the blur overlay
+  // Move the divs children back into body
+  while (blurOverlay.firstChild) {
+    document.body.appendChild(blurOverlay.firstChild);
+  }
+  // Remove the div
+  blurOverlay.remove();
+  // Reset window onscroll
+  window.onscroll = (): void => {};
+}
+
 function validatePrompt(prompt: string): boolean {
-  const url = 'https://127.0.0.1/validatePrompt';
+  const url = 'http://127.0.0.1:5000/validate-reason';
   const data = {
-    prompt,
+    reason: prompt,
   };
 
   fetch(url, {
@@ -23,7 +37,10 @@ function validatePrompt(prompt: string): boolean {
       return response.json(); // Assuming the response is in JSON format
     })
     .then((responseData) => {
-      console.log(responseData); // Handle the response data here
+      console.log(responseData);
+      if (responseData.is_valid) {
+        unblockContent();
+      }
     })
     .catch((error) => {
       console.error('There was a problem with the fetch operation:', error);
@@ -102,20 +119,6 @@ function blockContent(): void {
   window.onscroll = (): void => {
     window.scrollTo(LeftScroll, TopScroll);
   };
-}
-
-function unblockContent(): void {
-  // Remove the input field
-  promptContainer.remove();
-  // Function to apply the blur overlay
-  // Move the divs children back into body
-  while (blurOverlay.firstChild) {
-    document.body.appendChild(blurOverlay.firstChild);
-  }
-  // Remove the div
-  blurOverlay.remove();
-  // Reset window onscroll
-  window.onscroll = (): void => {};
 }
 
 export {blockContent, unblockContent};
