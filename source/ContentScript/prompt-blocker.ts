@@ -22,6 +22,7 @@ function validatePrompt(prompt: string): boolean {
   const url = 'http://127.0.0.1:5000/validate-reason';
   const data = {
     reason: prompt,
+    url: document.baseURI,
   };
 
   fetch(url, {
