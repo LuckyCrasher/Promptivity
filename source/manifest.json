@@ -1,25 +1,18 @@
 {
   "manifest_version": 3,
-  "name": "YouTube Visit Prompt",
+  "name": "Website Visit Prompt",
   "version": "1.0",
   "permissions": [
     "storage",
-    "tabs",
     "scripting"
   ],
-  "background": {
-    "service_worker": "background.js"
+  "action": {
+    "default_popup": "popup.html"
   },
-  "content_scripts": [
-    {
-      "matches": ["*://*.youtube.com/*"],
-      "js": ["contentScript.js"]
-    }
-  ],
   "web_accessible_resources": [
     {
       "resources": ["popup.html", "popup.js"],
-      "matches": ["*://*.youtube.com/*"]
+      "matches": ["<all_urls>"]
     }
   ]
 }

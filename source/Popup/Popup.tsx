@@ -2,25 +2,6 @@ import * as React from 'react';
 import { useState, useEffect } from 'react';
 import './styles.scss';
 
-window.addEventListener('DOMContentLoaded', (event) => {
-  // Inject the popup.html content
-  fetch(chrome.runtime.getURL('popup.html'))
-    .then(response => response.text())
-    .then(data => {
-      const div = document.createElement('div');
-      div.innerHTML = data;
-      document.body.appendChild(div);
-      // Once added, you can now run scripts or attach events to the content
-      const script = document.createElement('script');
-      script.src = chrome.runtime.getURL('popup.js');
-      script.onload = function() {
-        this.remove();
-      };
-      (document.head || document.documentElement).appendChild(script);
-    })
-    .catch(err => console.error(err));
-});
-
 const Popup = () => {
   const [userInput, setUserInput] = useState('');
   const [submissions, setSubmissions] = useState<string[]>([]);
@@ -51,7 +32,6 @@ const Popup = () => {
       return;
     }
     setLoading(true);
-    // Add the new submission to the array of submissions
     setSubmissions(prevSubmissions => [...prevSubmissions, userInput]);
     console.log('Data sent:', userInput);
     setUserInput(''); // Clear the input field
@@ -60,11 +40,8 @@ const Popup = () => {
 
   const handleGenerateData = async () => {
     setLoading(true);
-    // Simulate an API call to generate data based on the submissions
-    // This is where you would normally process the submissions
-    // Here, we're simply converting them to uppercase
     setTimeout(() => {
-      setDisplayData(submissions.map(s => s.toUpperCase())); // Convert to uppercase for display
+      setDisplayData(submissions.map(s => s.toUpperCase()));
       setLoading(false);
     }, 500);
   };
