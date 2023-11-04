@@ -10,7 +10,7 @@ function openWebPage(url: string): Promise<Tabs.Tab> {
 const Popup: React.FC = () => {
   return (
     <section id="popup">
-      <h2>WEB-EXTENSION-STARTER</h2>
+      <h2>Promptivity</h2>
       <button
         id="options__button"
         type="button"
@@ -27,7 +27,7 @@ const Popup: React.FC = () => {
               type="button"
               onClick={(): Promise<Tabs.Tab> => {
                 return openWebPage(
-                  'https://github.com/abhijithvijayan/web-extension-starter'
+                  'https://github.com/LuckyCrasher/Promptivity/tree/devel-v0.01'
                 );
               }}
             >
@@ -43,7 +43,7 @@ const Popup: React.FC = () => {
                 );
               }}
             >
-              Buy Me A Coffee
+              Enter websites
             </button>
           </li>
         </ul>
