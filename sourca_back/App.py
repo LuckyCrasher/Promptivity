@@ -4,16 +4,16 @@ from urllib.parse import urlparse
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import os
+import spacy
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.sql import text
 import sqlite3
 
 app = Flask(__name__)
+nlp = spacy.load("en_core_web_sm")
 CORS(app)
 
 submissions_storage = []
-# create the app
-app = Flask(__name__)
 # this variable, db, will be used for all SQLAlchemy commands
 db = SQLAlchemy()
 # change string to the name of your database; add path if necessary
@@ -53,6 +53,7 @@ def testdb():
         hed = '<h1>Something is broken.</h1>'
         return hed + error_text
 
+
 @app.route('/validate-reason', methods=['POST'])
 def validate_reason():
     content = request.json
@@ -80,10 +81,33 @@ def validate_reason():
         )
         db.session.add(new_data)
         db.session.commit()
-        return jsonify({"reason": reason, "url": result, "is_valid": True}), 200
+        if is_valid_response(reason):
+            return jsonify({"reason": reason, "url": result, "is_valid": True}), 200
+        else:
+            return jsonify({"error": "Invalid response or no verb in the response"}, 400)
     except Exception as e:
         print(e)
         return jsonify({"error": str(e)}), 500
+
+
+def is_valid_response(text):
+    doc = nlp(text)
+
+    # Define the allowed part-of-speech tags, including gerunds (VERB and PART)
+    allowed_tags = {"NOUN", "VERB", "ADJ", "ADV", "INTJ", "PRON", "PART"}
+
+    # Check if there is at least one token with an allowed part-of-speech tag
+    contains_allowed_tag = any(token.pos_ in allowed_tags for token in doc)
+
+    return contains_verb(text) and contains_allowed_tag
+
+
+def contains_verb(text):
+    doc = nlp(text)
+
+    # Check if there is at least one verb in the text
+    return any(token.pos_ == "VERB" for token in doc)
+
 
 @app.route('/get-submissions', methods=['GET'])
 def get_submissions():
