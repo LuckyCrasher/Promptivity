@@ -3,6 +3,20 @@
 let promptContainer: HTMLDivElement;
 let blurOverlay: HTMLDivElement;
 
+function unblockContent(): void {
+  // Remove the input field
+  promptContainer.remove();
+  // Function to apply the blur overlay
+  // Move the divs children back into body
+  while (blurOverlay.firstChild) {
+    document.body.appendChild(blurOverlay.firstChild);
+  }
+  // Remove the div
+  blurOverlay.remove();
+  // Reset window onscroll
+  window.onscroll = (): void => {};
+}
+
 function makePromptContainer(): HTMLDivElement {
   // Create a container for the input and button
   const container = document.createElement('div');
@@ -41,6 +55,7 @@ function makePromptContainer(): HTMLDivElement {
   submitButton.addEventListener('click', (): void => {
     console.log('HIER DER PROMPT');
     console.log(inputField.value);
+    unblockContent(); // Call a function to hide the popup
   });
 
   // Append the input field and submit button to the container
@@ -77,18 +92,6 @@ function blockContent(): void {
   };
 }
 
-function unblockContent(): void {
-  // Remove the input field
-  promptContainer.remove();
-  // Function to apply the blur overlay
-  // Move the divs children back into body
-  while (blurOverlay.firstChild) {
-    document.body.appendChild(blurOverlay.firstChild);
-  }
-  // Remove the div
-  blurOverlay.remove();
-  // Reset window onscroll
-  window.onscroll = (): void => {};
-}
+
 
 export {blockContent, unblockContent};
