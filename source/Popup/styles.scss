@@ -1,16 +1,17 @@
 #popup {
   min-width: 350px;
   padding: 40px;
-  border-radius: 8px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  background-color: #f9f9f9;
-  color: #333;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  background-color: #ffffff;
+  color: #333333;
 }
 
 #popup h2 {
-  font-size: 1.75em;
-  color: #007bff;
+  font-size: 2em;
+  color: #333333;
   margin-bottom: 25px;
+  font-weight: 700;
 }
 
 #popup form {
@@ -22,8 +23,8 @@
 #popup input[type="text"] {
   padding: 15px;
   font-size: 1em;
-  border: 2px solid #ddd;
-  border-radius: 8px;
+  border: 2px solid #eeeeee;
+  border-radius: 12px;
   transition: border-color 0.3s;
 }
 
@@ -37,7 +38,7 @@
   background-color: #007bff;
   color: white;
   border: none;
-  border-radius: 8px;
+  border-radius: 12px;
   cursor: pointer;
   font-size: 1em;
   transition: background-color 0.3s;
@@ -60,11 +61,11 @@
 #popup #generated-data {
   margin-top: 20px;
   padding: 15px;
-  background: white;
-  border: 1px solid #eee;
-  border-radius: 8px;
+  background: #f9f9f9;
+  border: 1px solid #eeeeee;
+  border-radius: 12px;
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
   font-family: 'Courier New', Courier, monospace;
-  color: #333;
+  color: #333333;
   overflow-x: auto;
 }

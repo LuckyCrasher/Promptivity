@@ -6,6 +6,7 @@ from email.message import EmailMessage
 from typing import Literal
 from urllib.parse import urlparse
 
+import matplotlib.pyplot as plt
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import spacy
@@ -13,6 +14,8 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import text
 import g4f
+from email.mime.image import MIMEImage  # Import MIMEImage
+import graph
 
 import smtplib  # email
 from email.mime.text import MIMEText  # email
@@ -189,11 +192,27 @@ def contains_verb(text):
     return any(token.pos_ == "VERB" for token in doc)
 
 
-def sendEmail(body, email):
-    message = EmailMessage()
+def sendEmail(body, email, bar_graph_path, pie_chart_path):
+    message = MIMEMultipart()
     message['From'] = senderEmail
     message['To'] = email
     message['Subject'] = 'Promptivity Report'
+
+    message.attach(MIMEText(body, 'plain'))
+
+    # Attach the bar graph
+    with open(bar_graph_path, 'rb') as file:
+        img = MIMEImage(file.read())
+        img.add_header('Content-Disposition', f'attachment; filename="{bar_graph_path}"')
+        message.attach(img)
+
+    # Attach the pie chart
+    with open(pie_chart_path, 'rb') as file:
+        img = MIMEImage(file.read())
+        img.add_header('Content-Disposition', f'attachment; filename="{pie_chart_path}"')
+        message.attach(img)
+
+
 
     message.set_content(body)
     print(message.as_string())
@@ -347,10 +366,14 @@ def ask_chatgpt():
 def handle_sendmail(thread_num, email):
     print(f"Thread {thread_num}: starting")
     most_common_website, most_common_reason, duration_on_site = compute_stats()
+
+    # Call the function to create and save graphs
+    bar_graph_path, pie_chart_path = generate_data()
+
     chat_gpt = ask_chatgpt()
     if chat_gpt is None:
         chat_gpt = genEmail(most_common_website, most_common_reason, duration_on_site)
-    sendEmail(chat_gpt, email)
+    sendEmail(chat_gpt, email, bar_graph_path, pie_chart_path)
     print(f"Thread {thread_num}: finishing")
     running_threads.pop(thread_num)
 
@@ -384,12 +407,62 @@ def close_running_threads():
         thread.join()
     print("Threads complete, ready to finish")
 
+def generate_data():
+    with app.app_context():
+
+        querry_data_for_graphs = db.session.execute(
+            text("SELECT hostname, prompt FROM sessions"))
+
+        website_reason = querry_data_for_graphs.fetchall()
+
+    select_query = """
+        SELECT hostname, SUM(duration) AS duration
+        FROM (
+            SELECT hostname,
+                (ROUND((JULIANDAY(r2.timestamp) - JULIANDAY(r1.timestamp)) * 86400, 2)) AS duration
+            FROM sessions
+                JOIN records r1
+                    ON sessions.sessionID = r1.sessionID
+                        AND r1.action = 'start'
+                        AND r1.timestamp > DATETIME('now', '-6 days')
+                JOIN records r2
+                    ON sessions.sessionID = r2.sessionID
+                        AND r2.action = 'end'
+                        AND r2.timestamp > DATETIME('now', '-6 days')
+                        AND r1.timestamp < r2.timestamp
+            GROUP BY r1.timestamp, hostname
+        )
+        GROUP BY hostname
+        ORDER BY duration DESC;
+        """
+
+
+
+
+    with app.app_context():
+        query = db.session.execute(text(select_query))
+        website_duration = query.fetchall()
+
+
+    print(website_reason)
+    print(website_duration)
+
+    bar_graph_path, pie_chart_path = graph.create_and_save_graphs(website_reason, website_duration)
+
+    #plt.show()
+    return bar_graph_path, pie_chart_path
+
+
+
 
 def main():
     atexit.register(close_running_threads)
     with app.app_context():
         db.create_all()
+    generate_data()
     app.run(debug=True)
+
+
 
 
 if __name__ == '__main__':
