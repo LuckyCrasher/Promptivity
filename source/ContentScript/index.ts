@@ -2,6 +2,7 @@
 
 let promptContainer: HTMLDivElement;
 let promptStyle: HTMLStyleElement;
+let title: HTMLDivElement
 let sessionID = '';
 
 function storeTimestamp(action: string): void {
@@ -82,9 +83,11 @@ function validatePrompt(prompt: string): boolean {
     })
     .then((responseData) => {
       console.log(responseData);
-      sessionID = responseData.sessionID;
       if (responseData.is_valid) {
+        sessionID = responseData.sessionID;
         unblockContent();
+      } else {
+        title.textContent = responseData.reason;
       }
     })
     .catch((error) => {
@@ -123,7 +126,7 @@ function makePromptContainer(): HTMLDivElement {
   tabBackground.style.borderRadius = '5px 5px 0 0';
   // Create a title for the popup
 
-  const title = document.createElement('div');
+  title = document.createElement('div');
   title.textContent = 'Please tell us why you are visiting this website';
   title.style.fontSize = '18px';
   title.style.color = 'white'; // Text color

@@ -1,5 +1,6 @@
 import atexit
 import datetime
+import re
 import threading
 import uuid
 from email.message import EmailMessage
@@ -17,6 +18,8 @@ import g4f
 import smtplib  # email
 from email.mime.text import MIMEText  # email
 from email.mime.multipart import MIMEMultipart  # email
+
+hardcore = True
 
 senderEmail = "Promptivity@hotmail.com"
 senderPassword = "BlueLight123"
@@ -161,14 +164,41 @@ def validate_reason():
         Sessions.create_session(sessionID, parsed_uri.hostname, reason)
         Records.create_record(sessionID, "start")
         print("OKAY")
-        if is_valid_response(reason):
-            return jsonify({"sessionID": sessionID, "reason": reason, "url": result, "is_valid": True}), 200
+        print(ask_gpt_for_validation(reason))
+        valid, response_reason = check_reason(reason)
+        print(valid)
+        if valid:
+            return jsonify({"sessionID": sessionID, "reason": reason, "url": result, "is_valid": valid}), 200
         else:
-            return jsonify({"error": "Invalid response or no verb in the response", "reason": reason, "url": result,
-                            "is_valid": False}, 400)
+            return jsonify({"error": "Invalid response or no verb in the response",
+                            "reason": f"'{reason}' is invalid",
+                            "url": result, "is_valid": False}, 200)
     except Exception as e:
         print(e)
         return jsonify({"error": str(e)}), 500
+
+
+def check_reason(reason):
+    has_grammar = is_valid_response(reason)
+    if has_grammar:
+        if hardcore:
+            valid, resp_reason = let_chat_gpt_decide(reason)
+            return valid, resp_reason
+    return False, "You are missing a grammatically correct structure"
+
+
+def let_chat_gpt_decide(prompt):
+    cht_gpt = ask_gpt_for_validation(prompt)
+    pattern = r'\b(VALID|INVALID)\b'
+
+    # Search for the first occurrence of the pattern in the input text
+    match = re.search(pattern, cht_gpt)
+
+    # Check if a match was found
+    if match:
+        return True, cht_gpt
+    else:
+        return False, cht_gpt
 
 
 def is_valid_response(text):
@@ -250,6 +280,36 @@ def genEmail(mostUseWeb, mostUsedReaosn, duration_on_site):
     greeting = "Hey there,"
     body = greeting + "\n" + webStatement + "\n" + reasonStatement + "\n"
     return body
+
+
+def ask_gpt_for_validation(prompt):
+    # Construct the prompt
+    prompt = f"""
+        I want you to decide if I should be allowed onto a website. I am going to provide you with example
+        reasons.
+        "I want to waste my time" - INVALID
+        "I want to message my friends" - VALID
+        "I want to watch a nice movie" - VALID
+        "I want to go doom scrolling" - INVALID
+        "I want to waste my time" - INVALID
+        Now I'm going to provide you with a real reason:
+        {prompt}
+        You will decide if it is valid or not and respond with only one of the following options:
+        "VALID" or "INVALID"
+        Write one sentence why.
+        """
+
+    # Use g4f to generate the email summary
+    try:
+        validation = g4f.ChatCompletion.create(
+            model=g4f.models.gpt_4,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        # Print the generated email content
+        return validation
+    except Exception as e:
+        print(f"An error occurred: {e}")
+    return None
 
 
 def compute_stats():
