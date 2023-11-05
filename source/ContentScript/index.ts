@@ -1,7 +1,7 @@
 // import {browser} from 'webextension-polyfill-ts';
 
 let promptContainer: HTMLDivElement;
-let blurOverlay: HTMLDivElement;
+let promptStyle: HTMLStyleElement;
 let sessionID = '';
 
 function storeTimestamp(action: string): void {
@@ -43,15 +43,21 @@ document.addEventListener('visibilitychange', () => {
 function unblockContent(): void {
   // Remove the input field
   promptContainer.remove();
-  // Function to apply the blur overlay
-  // Move the divs children back into body
-  while (blurOverlay.firstChild) {
-    document.body.appendChild(blurOverlay.firstChild);
-  }
-  // Remove the div
-  blurOverlay.remove();
+
+  promptStyle.innerHTML = '';
+
   // Reset window onscroll
-  window.onscroll = (): void => {};
+  document.documentElement.setAttribute('style', 'overflow-y: auto !important');
+  Array.from(document.getElementsByTagName('video')).forEach(
+    (element): void => {
+      element.volume = 100;
+    }
+  );
+  Array.from(document.getElementsByTagName('audio')).forEach(
+    (element): void => {
+      element.volume = 100;
+    }
+  );
 }
 
 function validatePrompt(prompt: string): boolean {
@@ -88,28 +94,41 @@ function validatePrompt(prompt: string): boolean {
 }
 
 function makePromptContainer(): HTMLDivElement {
+  promptStyle = document.createElement('style');
+  promptStyle.innerHTML = `
+    .promptivity-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      right: 0;
+      z-index: 9999;
+      backdrop-filter: blur(8px);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }`;
+  document.head.appendChild(promptStyle);
+
   const container = document.createElement('div');
-  container.style.position = 'fixed';
-  container.style.top = '50%';
-  container.style.left = '50%';
-  container.style.transform = 'translate(-50%, -50%)';
-  container.style.textAlign = 'center';
-  container.style.zIndex = '9999';
+
+  container.classList.add('promptivity-overlay');
 
   // Create a background container for the tab
+
   const tabBackground = document.createElement('div');
   tabBackground.style.backgroundColor = '#FF6666'; // Light red background color
   tabBackground.style.width = '100%';
   tabBackground.style.padding = '10px';
   tabBackground.style.borderRadius = '5px 5px 0 0';
-
   // Create a title for the popup
+
   const title = document.createElement('div');
   title.textContent = 'Please tell us why you are visiting this website';
   title.style.fontSize = '18px';
   title.style.color = 'white'; // Text color
-
   // Create a text input field
+
   const inputField = document.createElement('input');
   inputField.type = 'text';
   inputField.placeholder = 'Type your reason here...';
@@ -121,8 +140,8 @@ function makePromptContainer(): HTMLDivElement {
   inputField.style.width = '200px';
   inputField.style.marginRight = '5px';
   inputField.style.backgroundColor = 'white'; // White background
-
   // Create a submit button
+
   const submitButton = document.createElement('button');
   submitButton.type = 'button';
   submitButton.textContent = 'Submit';
@@ -133,19 +152,22 @@ function makePromptContainer(): HTMLDivElement {
   submitButton.style.border = 'none';
   submitButton.style.borderRadius = '5px';
   submitButton.style.cursor = 'pointer';
-
   // Add event listeners or functionality for the submit button as needed
+
   submitButton.addEventListener('click', (): void => {
     validatePrompt(inputField.value);
   });
-
   // Append the title and background to the background container
-  tabBackground.appendChild(title);
 
+  tabBackground.appendChild(title);
   // Append the background container, input field, and submit button to the main container
-  container.appendChild(tabBackground);
-  container.appendChild(inputField);
-  container.appendChild(submitButton);
+
+  const centered = document.createElement('div');
+  centered.appendChild(tabBackground);
+  centered.appendChild(inputField);
+  centered.appendChild(submitButton);
+
+  container.appendChild(centered);
 
   // Append the container to the document body
   return container;
@@ -176,24 +198,22 @@ function blockContent(): void {
     // Append the input field to the document body
     // Function to apply the blur overlay
 
-    blurOverlay = document.createElement('div');
-    blurOverlay.id = 'wrap-blur-overlay';
-
-    // Move the body's children into this wrapper
-    while (document.body.firstChild) {
-      blurOverlay.appendChild(document.body.firstChild);
-    }
-
     // Append the wrapper to the body
-    blurOverlay.style.filter = 'blur(8px)';
-    document.body.appendChild(blurOverlay);
     document.body.appendChild(promptContainer);
-    const TopScroll = document.documentElement.scrollTop;
-    const LeftScroll = document.documentElement.scrollLeft;
-
-    window.onscroll = (): void => {
-      window.scrollTo(LeftScroll, TopScroll);
-    };
+    document.documentElement.setAttribute(
+      'style',
+      'overflow-y: hidden !important'
+    );
+    Array.from(document.getElementsByTagName('video')).forEach(
+      (element): void => {
+        element.volume = 0;
+      }
+    );
+    Array.from(document.getElementsByTagName('audio')).forEach(
+      (element): void => {
+        element.volume = 0;
+      }
+    );
   }
 }
 
