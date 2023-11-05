@@ -198,23 +198,17 @@ def sendEmail(body, email, bar_graph_path, pie_chart_path):
     message['To'] = email
     message['Subject'] = 'Promptivity Report'
 
-    message.attach(MIMEText(body, 'plain'))
+    message.attach(MIMEText(body, 'html'))
 
-    # Attach the bar graph
-    with open(bar_graph_path, 'rb') as file:
-        img = MIMEImage(file.read())
-        img.add_header('Content-Disposition', f'attachment; filename="{bar_graph_path}"')
-        message.attach(img)
+    message.attach(MIMEImage(bar_graph_path, name="bar_graph.png"))
+    #mime_body.attach(
+    #    MIMEText(f'<img src="data:image/png;base64,{bar_graph_path}" alt="Website Chart" width="400" height="200">',
+     #            'html'))
 
-    # Attach the pie chart
-    with open(pie_chart_path, 'rb') as file:
-        img = MIMEImage(file.read())
-        img.add_header('Content-Disposition', f'attachment; filename="{pie_chart_path}"')
-        message.attach(img)
+    #message.attach(
+    #    MIMEText(f'<img src="data:image/png;base64,{pie_chart_path}" alt="Website Chart" width="400" height="200">',
+    #             'html'))
 
-
-
-    message.set_content(body)
     print(message.as_string())
 
     try:
@@ -244,31 +238,93 @@ def format_duration(seconds):
         return str(duration)
 
 
-def genEmail(mostUseWeb, mostUsedReaosn, duration_on_site):
-    webStatement = "Your top three used websites were: \n"
-    i = 1
-    for website in mostUseWeb:
-        site, num = website
-        webStatement += f"{i}. {site} visited {num} times\n"
-        i += 1
+def genEmail(mostUseWeb, mostUsedReaosn, durationOnSite):
+    most_used_site = []
+    for site, num in mostUseWeb:
+        most_used_site.append({'site': site, 'frequency': num})
 
-    reasonStatement = "Your most used reasons were: \n"
+    most_used_reason = []
+    for site, num in mostUsedReaosn:
+        most_used_reason.append({'site': site, 'frequency': num})
 
-    i = 1
-    for reason in mostUsedReaosn:
-        reason, num = reason
-        reasonStatement += f"{i}. {reason} given {num} times \n"
-        i += 1
+    duration_on_site = []
+    for site, duration in mostUsedReaosn:
+        duration_on_site.append({'site': site, 'duration': format_duration(duration)})
 
-    reasonStatement = "The amount of time you spent: \n"
-    i = 1
-    for site, duartion in duration_on_site:
-        reasonStatement += f"{i}. {site} given {format_duration(duartion)} \n"
-        i += 1
+    html = f"""
+    <!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {{
+            font-family: Arial, sans-serif;
+        }}
+        .container {{
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }}
+        h1 {{
+            color: #0070c0;
+        }}
+        p {{
+            margin-top: 10px;
+            margin-bottom: 10px;
+        }}
+        ul {{
+            list-style-type: disc;
+            margin-left: 20px;
+        }}
+        .chart-container {{
+            text-align: center;
+        }}
+    </style>
+    <!-- Include Chart.js library from CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>Hello,</h1>
+            <p>I am Promptivity, and I will provide you with insights into your recent internet activity to help you better understand your online habits.</p>
 
-    greeting = "Hey there,"
-    body = greeting + "\n" + webStatement + "\n" + reasonStatement + "\n"
-    return body
+            <h2>Summary of Your Activity:</h2>
+            <ul>
+                <li>{most_used_site[0]['site']} visited {most_used_site[0]['frequency']} times</li>
+                <li>{most_used_site[1]['site']} visited {most_used_site[1]['frequency']} times</li>
+                <li>{most_used_site[2]['site']} visited {most_used_site[2]['frequency']} times</li>
+            </ul>
+
+            <h2>Reasons for Visiting These Sites:</h2>
+            <ul>
+                <li>{most_used_reason[0]['site']} used {most_used_reason[0]['frequency']} times</li>
+                <li>{most_used_reason[1]['site']} used {most_used_reason[1]['frequency']} times</li>
+                <li>{most_used_reason[2]['site']} used {most_used_reason[2]['frequency']} times</li>
+            </ul>
+
+            <h2>Time Spent on Websites:</h2>
+             <ul>
+                <li>{duration_on_site[0]['site']} for {duration_on_site[0]['duration']}</li>
+                <li>{duration_on_site[1]['site']} for {duration_on_site[1]['duration']}</li>
+                <li>{duration_on_site[2]['site']} for {duration_on_site[2]['duration']}</li>
+            </ul>
+
+            <div class="chart-container">
+                <canvas id="websiteChart" width="400" height="200"></canvas>
+            </div>
+
+            <p>It's great to see that you enjoy exploring different platforms for entertainment. However, it's also important to remember that spending too much time on social media can lead to distractions and hinder your productivity.</p>
+
+            <p>Try to set specific time limits for your online activities and consider using productivity apps or browser extensions that can help you manage your time more effectively. Additionally, don't forget to take regular breaks to rest your eyes and mind.</p>
+
+            <p>Thank you for using Promptivity. Have a great day! 😊</p>
+    </div>
+</body>
+</html>
+
+    
+    """
+
+    return html
 
 
 def compute_stats():
@@ -370,7 +426,7 @@ def handle_sendmail(thread_num, email):
     # Call the function to create and save graphs
     bar_graph_path, pie_chart_path = generate_data()
 
-    chat_gpt = ask_chatgpt()
+    chat_gpt = genEmail(most_common_website, most_common_reason, duration_on_site)
     if chat_gpt is None:
         chat_gpt = genEmail(most_common_website, most_common_reason, duration_on_site)
     sendEmail(chat_gpt, email, bar_graph_path, pie_chart_path)
@@ -407,9 +463,9 @@ def close_running_threads():
         thread.join()
     print("Threads complete, ready to finish")
 
+
 def generate_data():
     with app.app_context():
-
         querry_data_for_graphs = db.session.execute(
             text("SELECT hostname, prompt FROM sessions"))
 
@@ -436,23 +492,17 @@ def generate_data():
         ORDER BY duration DESC;
         """
 
-
-
-
     with app.app_context():
         query = db.session.execute(text(select_query))
         website_duration = query.fetchall()
-
 
     print(website_reason)
     print(website_duration)
 
     bar_graph_path, pie_chart_path = graph.create_and_save_graphs(website_reason, website_duration)
 
-    #plt.show()
+    # plt.show()
     return bar_graph_path, pie_chart_path
-
-
 
 
 def main():
@@ -461,8 +511,6 @@ def main():
         db.create_all()
     generate_data()
     app.run(debug=True)
-
-
 
 
 if __name__ == '__main__':

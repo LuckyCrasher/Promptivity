@@ -1,3 +1,6 @@
+import base64
+from io import BytesIO
+
 import pandas as pd
 import matplotlib.pyplot as plt
 
@@ -39,12 +42,15 @@ def create_and_save_graphs(data_website_reason, data_website_duration):
     ax2.axis('equal')
 
     # Save the bar graph as an image file
-    bar_graph_path = 'bar_graph.png'
-    fig1.savefig(bar_graph_path)
+    buffer_bar = BytesIO()
+    fig1.savefig(buffer_bar, format='png')
+    buffer_bar.seek(0)
+    bar_base64 = base64.b64encode(buffer_bar.read()).decode()
 
-    # Save the pie chart as an image file
-    pie_chart_path = 'pie_chart.png'
-    fig2.savefig(pie_chart_path)
+    buffer_pie = BytesIO()
+    fig2.savefig(buffer_pie, format='png')
+    buffer_pie.seek(0)
+    pie_bas64 = base64.b64encode(buffer_pie.read()).decode()
 
-    # Return the paths of the saved graphs
-    return bar_graph_path, pie_chart_path
+    # Return the base64 of the saved graphs
+    return bar_base64, pie_bas64
