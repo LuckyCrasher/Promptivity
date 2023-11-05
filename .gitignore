@@ -203,3 +203,5 @@ dist/
 !.yarn/plugins
 .pnp.*
 /sourca_back/venv/
+/instance/promptivity.db
+/yarn.lock
