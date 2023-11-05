@@ -14,9 +14,9 @@ from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import text
 import g4f
 
-import smtplib#email
-from email.mime.text import MIMEText#email
-from email.mime.multipart import MIMEMultipart#email
+import smtplib  # email
+from email.mime.text import MIMEText  # email
+from email.mime.multipart import MIMEMultipart  # email
 
 senderEmail = "Promptivity@hotmail.com"
 senderPassword = "BlueLight123"
@@ -58,7 +58,6 @@ class Sessions(db.Model):
         self.hostname = hostname
         self.prompt = prompt
 
-
     def __repr__(self):
         return f'<Records{self.timestamp} - {self.hostname} - {self.prompt}>\n'
 
@@ -79,15 +78,13 @@ class Records(db.Model):
         return new_record
 
     def __init__(self, sessionID, timestamp, action):
-        self.sessionID = sessionID,
+        self.sessionID = sessionID
         self.timestamp = timestamp
         self.action = action
         pass
 
     def __repr__(self):
         return f"<Record {self.id} - {self.sessionID} - {self.timestamp} - {self.action}>\n"
-
-
 
 
 # NOTHING BELOW THIS LINE NEEDS TO CHANGE
@@ -103,6 +100,39 @@ def testdb():
         error_text = "<p>The error:<br>" + str(e) + "</p>"
         hed = '<h1>Something is broken.</h1>'
         return hed + error_text
+
+
+@app.route('/getrecords')
+def getrecords():
+    try:
+        results = db.session.execute(text("SELECT * FROM Records"))
+        return f'<h1>It works.</h1><br><p>{results.all()}</p>'
+    except Exception as e:
+        # e holds description of the error
+        error_text = "<p>The error:<br>" + str(e) + "</p>"
+        hed = '<h1>Something is broken.</h1>'
+        return hed + error_text
+
+
+@app.route('/new-record', methods=['POST'])
+def add_record():
+    content = request.json
+    if not content:
+        return jsonify({"error": "No content provided"}), 400
+
+    if 'sessionID' not in content:
+        return jsonify({"error": "No sessionID provided"}), 400
+
+    if 'action' not in content:
+        return jsonify({"error": "No action provided"}), 400
+
+    sessionID = content['sessionID']
+    action = content['action']
+    if action in Action.__args__:
+        print(f"added record {sessionID} - {action}")
+        Records.create_record(sessionID, action)
+        return jsonify({"sessionID": sessionID, "action": action, "success": True}), 200
+    return jsonify({"error": "Invalid request no action given"}, 400)
 
 
 @app.route('/validate-reason', methods=['POST'])
@@ -126,13 +156,16 @@ def validate_reason():
         print(parsed_uri.hostname)
 
         sessionID = str(uuid.uuid4())
+        print(type(sessionID))
+        print(sessionID)
         Sessions.create_session(sessionID, parsed_uri.hostname, reason)
         Records.create_record(sessionID, "start")
         print("OKAY")
         if is_valid_response(reason):
-            return jsonify({"sessionid": new_data.sessionID, "reason": reason, "url": result, "is_valid": True}), 200
+            return jsonify({"sessionID": sessionID, "reason": reason, "url": result, "is_valid": True}), 200
         else:
-            return jsonify({"error": "Invalid response or no verb in the response"}, 400)
+            return jsonify({"error": "Invalid response or no verb in the response", "reason": reason, "url": result,
+                            "is_valid": False}, 400)
     except Exception as e:
         print(e)
         return jsonify({"error": str(e)}), 500
@@ -177,7 +210,22 @@ def sendEmail(body, email):
         server.quit()
 
 
-def genEmail(mostUseWeb, mostUsedReaosn):
+def format_duration(seconds):
+    if seconds < 60:
+        return f"{format(seconds, '.2f')} second{'s' if seconds > 1 else ''}"
+    elif seconds < 3600:
+        minutes, remainder = divmod(seconds, 60)
+        return f"{format(minutes, '.0f')} minute{'s' if minutes > 1 else ''} and {format(seconds, '.2f')} second{'s' if remainder > 1 else ''}"
+    elif seconds < 86400:
+        hours, remainder = divmod(seconds, 3600)
+        minutes, seconds = divmod(remainder, 60)
+        return f"{format(hours, '.2f')} hour{'s' if hours > 1 else ''}, {format(minutes, '.2f')} minute{'s' if minutes > 1 else ''}, and {format(seconds, '.2f')} second{'s' if seconds > 1 else ''}"
+    else:
+        duration = datetime.timedelta(seconds=seconds)
+        return str(duration)
+
+
+def genEmail(mostUseWeb, mostUsedReaosn, duration_on_site):
     webStatement = "Your top three used websites were: \n"
     i = 1
     for website in mostUseWeb:
@@ -193,6 +241,12 @@ def genEmail(mostUseWeb, mostUsedReaosn):
         reasonStatement += f"{i}. {reason} given {num} times \n"
         i += 1
 
+    reasonStatement = "The amount of time you spent: \n"
+    i = 1
+    for site, duartion in duration_on_site:
+        reasonStatement += f"{i}. {site} given {format_duration(duartion)} \n"
+        i += 1
+
     greeting = "Hey there,"
     body = greeting + "\n" + webStatement + "\n" + reasonStatement + "\n"
     return body
@@ -200,19 +254,51 @@ def genEmail(mostUseWeb, mostUsedReaosn):
 
 def compute_stats():
     with app.app_context():
-        querry_num_websites = db.session.execute(text("SELECT hostname, COUNT(hostname) as num FROM Records GROUP BY hostname ORDER BY num DESC LIMIT 3"))
+        querry_num_websites = db.session.execute(
+            text("SELECT hostname, COUNT(hostname) as num FROM sessions GROUP BY hostname ORDER BY num DESC LIMIT 3"))
         most_used_sites = querry_num_websites.fetchall()
 
     with app.app_context():
-        querry_common_reasons = db.session.execute(text("SELECT prompt, COUNT(prompt) as num FROM Records GROUP BY prompt ORDER BY num DESC LIMIT 3"))
+        querry_common_reasons = db.session.execute(
+            text("SELECT prompt, COUNT(prompt) as num FROM sessions GROUP BY prompt ORDER BY num DESC LIMIT 3"))
         most_common_prompts = querry_common_reasons.fetchall()
-    return most_used_sites, most_common_prompts
 
-
-def getAllData():
+    select_query = """
+        SELECT hostname, SUM(duration) AS duration
+        FROM (
+            SELECT hostname,
+                (ROUND((JULIANDAY(r2.timestamp) - JULIANDAY(r1.timestamp)) * 86400, 2)) AS duration
+            FROM sessions
+                JOIN records r1
+                    ON sessions.sessionID = r1.sessionID
+                        AND r1.action = 'start'
+                        AND r1.timestamp > DATETIME('now', '-6 days')
+                JOIN records r2
+                    ON sessions.sessionID = r2.sessionID
+                        AND r2.action = 'end'
+                        AND r2.timestamp > DATETIME('now', '-6 days')
+                        AND r1.timestamp < r2.timestamp
+            GROUP BY r1.timestamp, hostname
+        )
+        GROUP BY hostname
+        ORDER BY duration DESC;
+        """
     with app.app_context():
-        query = db.session.execute(text("SELECT hostname, prompt from Records"))
-    return query.fetchall()
+        query = db.session.execute(text(select_query))
+        duration_on_site = query.fetchall()
+
+    return most_used_sites, most_common_prompts, duration_on_site
+
+
+@app.route("/compute-stats")
+def get_data_analysis():
+    most_common_sites, most_used_prompts, amount_of_time = compute_stats()
+
+    return jsonify({"data": {
+        "most_common_sites": str(most_common_sites),
+        "most_used_prompts": str(most_used_prompts),
+        "duration_spent": str(amount_of_time)
+    }}), 200
 
 
 def ask_chatgpt():
@@ -226,32 +312,15 @@ def ask_chatgpt():
                        The most common reasons you gave to visit those sites:
                        - {Reason 1}: _ amount used 
                        - {Reason 2}: _ amount used 
-                       - {Reason 3}: _ amount used 
+                       - {Reason 3}: _ amount used
+                       The amount of time spent on various websites:
+                       - {Website 1}: _ duration spent 
+                       - {Website 2}: _ duration spent
+                       - {Website 3}: _ duration spent
                        Short Recommendations about productivity and about spending time wisely
                        Thank you for using Promptivity, Have a great day! 😊"""
 
-    # Function to convert time to minutes
-    #def convert_to_minutes(time_str):
-    #    if 'hour' in time_str:
-    #        hours = float(time_str.split(' hour')[0])
-    #        total_minutes = int(hours * 60)
-    #    else:
-    #        total_minutes = int(time_str.split(' minute')[0])
-    #    return total_minutes
-
-    # Convert the Duration column to minutes
-    #extended_dataset['Duration'] = extended_dataset['Duration'].apply(convert_to_minutes)
-
-    # Group by Reason and aggregate
-    #aggregated_data = extended_dataset.groupby('Reason').agg({
-    #    'Duration': 'sum'
-    #}).reset_index()
-
-    # Convert the aggregated duration back to a more readable format (hours and minutes)
-    #aggregated_data['Duration'] = aggregated_data['Duration'].apply(lambda x: f"{x // 60} hours {x % 60} minutes")
-
-    # Create a string representation of the aggregated data
-    aggregated_str = str(getAllData())
+    aggregated_str = str(compute_stats())
 
     # Construct the prompt
     prompt = f"""
@@ -277,10 +346,10 @@ def ask_chatgpt():
 
 def handle_sendmail(thread_num, email):
     print(f"Thread {thread_num}: starting")
-    most_common_website, most_common_reason = compute_stats()
+    most_common_website, most_common_reason, duration_on_site = compute_stats()
     chat_gpt = ask_chatgpt()
     if chat_gpt is None:
-        chat_gpt = genEmail(most_common_website, most_common_reason)
+        chat_gpt = genEmail(most_common_website, most_common_reason, duration_on_site)
     sendEmail(chat_gpt, email)
     print(f"Thread {thread_num}: finishing")
     running_threads.pop(thread_num)
@@ -303,9 +372,10 @@ def get_sendmail():
     return jsonify({"reason": "worked", "email": email}), 200
 
 
-@app.route('/get-submissions', methods=['GET'])
-def get_submissions():
-    return jsonify(submissions_storage), 200
+@app.route('/gettimeduration', methods=['GET'])
+def get_timeduration():
+    _, _, time = compute_stats()
+    return jsonify({"data": format_duration(time[0][1])}), 200
 
 
 def close_running_threads():

@@ -2,7 +2,7 @@ import * as React from 'react';
 import {browser, Tabs} from 'webextension-polyfill-ts';
 
 import './styles.scss';
-import {unblockContent} from '../ContentScript/prompt-blocker';
+import {unblockContent} from '../ContentScript/index';
 
 function openWebPage(url: string): Promise<Tabs.Tab> {
   return browser.tabs.create({url});
