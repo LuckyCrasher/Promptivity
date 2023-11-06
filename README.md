@@ -21,11 +21,13 @@ Run the following:
  - ``` yarn run dev:opera``` to start the development server for opera extension
  - ``` yarn run build``` builds and packs extensions all at once to extension/ directory
     
-To install the backend:
+To install the backend: \
 Navigate to the backend source with:
-- ```cd sourca_back```
+ - ```cd sourca_back```
+
 Create a new virtual envirument with:
-- ```python -m venv venv```
-- Activate it.
+ - ```python -m venv venv```
+ - Activate it.
+
 Install requirements with:
-- ```pip install -r requirements.txt```
+ - ```pip install -r requirements.txt```
