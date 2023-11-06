@@ -22,8 +22,8 @@ Run the following:
  - ``` yarn run build``` builds and packs extensions all at once to extension/ directory
     
 To install the backend:
-Navigate to the backand source with:
-- ```sourca_back```
+Navigate to the backend source with:
+- ```cd sourca_back```
 Create a new virtual envirument with:
 - ```python -m venv venv```
 - Activate it.
