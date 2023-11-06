@@ -1,53 +1,87 @@
-@import "../styles/fonts";
-@import "../styles/reset";
-@import "../styles/variables";
-
-body {
-  color: $black;
-  background-color: $greyWhite;
-}
-
-
 #popup {
-  min-width: 350px;
-  padding: 30px 20px;
-
-  h2 {
-    font-size: 25px;
-    text-align: center;
-  }
-
-  #options__button {
-    width: 50%;
-    background: green;
-    color: white;
-    font-weight: 500;
-    border-radius: 15px;
-    padding: 5px 10px;
-    justify-content: center;
-    margin: 20px auto;
-    cursor: pointer;
-    opacity: 0.8;
     display: flex;
-  }
-
-  .links__holder {
-    ul {
-      display: flex;
-      margin-top: 1em;
-      justify-content: space-around;
-
-      li {
-        button {
-          border-radius: 25px;
-          font-size: 20px;
-          font-weight: 600;
-          padding: 10px 17px;
-          background-color: rgba(0, 0, 255, 0.7);
-          color: white;
-          cursor: pointer;
-        }
-      }
-    }
-  }
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 350px;
+    padding: 20px;
+    border-radius: 16px;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.19), 0 6px 6px rgba(0, 0, 0, 0.23);
+    background-color: #ffffff;
+    color: #34495e;
+    font-family: 'Roboto', sans-serif;
+    transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
 }
+
+#popup:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 14px 28px rgba(0, 0, 0, 0.25), 0 10px 10px rgba(0, 0, 0, 0.22);
+}
+
+#popup h2 {
+    font-size: 2.5em;
+    margin-bottom: 16px;
+    font-weight: 700;
+    color: #2c3e50;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+#popup form {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    margin-bottom: 20px;
+}
+
+#popup input[type="email"] {
+    width: 80%;
+    padding: 12px;
+    margin-bottom: 10px;
+    border: 2px solid #ecf0f1;
+    border-radius: 8px;
+    font-size: 1em;
+    transition: border-color 0.3s ease-in-out;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+#popup input[type="email"]:focus {
+    border-color: #3498db;
+    outline: none;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+#popup button {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    background-color: #3498db;
+    color: #ffffff;
+    font-size: 1em;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: background-color 0.3s ease-in-out, transform 0.3s ease-in-out;
+    letter-spacing: 1px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+#popup button:hover {
+    background-color: #2980b9;
+    transform: translateY(-3px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+#popup #github-button {
+    margin-bottom: 20px;
+    background-color: #2c3e50;
+}
+
+#popup .links__holder,
+#popup .button-container {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    margin-top: 10px;
+}
+
